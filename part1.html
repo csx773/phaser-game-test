@@ -38,6 +38,7 @@
         var cursors;
         var score = 0;
         var scoreText;
+        var bombs;
       
         var game = new Phaser.Game(config);
       // preload function loads in all game asset before game starts
@@ -125,6 +126,11 @@
         // if player and stars overlap (touch), then use callback collectStar
         this.physics.add.overlap(player, stars, collectStar, null, this);
 
+        bombs = this.physics.add.group();
+
+        this.physics.add.collider(bombs, platforms);
+        this.physics.add.collider(player, bombs, hitBomb, null, this);
+
 
       }
 
@@ -151,13 +157,41 @@
                 player.setVelocityY(-330);
             }
         }
-
+        
         function collectStar (player, star)
         {
-            // if player touches the star, disableBody = make it inviisble and remove from game
             star.disableBody(true, true);
+
+            //  Add and update the score
             score += 10;
-            scoreText.setText('Score: ' + score)
+            scoreText.setText('Score: ' + score);
+
+            if (stars.countActive(true) === 0)
+            {
+                //  A new batch of stars to collect
+                stars.children.iterate(function (child) {
+
+                    child.enableBody(true, child.x, 0, true, true);
+
+                });
+
+                var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+
+                var bomb = bombs.create(x, 16, 'bomb');
+                bomb.setBounce(1);
+                bomb.setCollideWorldBounds(true);
+                bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+                bomb.allowGravity = false;
+
+            }
+        }
+
+        function hitBomb (player, bomb)
+        {
+            this.physics.pause();
+            player.setTint(0xff0000);
+            player.anims.play('turn');
+            gameOver = true;
         }
     </script>
   </body>
