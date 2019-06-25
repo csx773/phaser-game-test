@@ -1,107 +1,164 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <title>Making your first Phaser 3 Game - Part 1 Progress</title>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
     <style type="text/css">
-        body {
-            margin: 0;
-        }
+      body {
+        margin: 0;
+      }
     </style>
-</head>
+  </head>
 
-<body>
-
+  <body>
     <script type="text/javascript">
+      var config = {
+        //Phaser.AUTO tries to use Phaser.WEBGL, then use Phaser.CANVAS if not supported
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        physics: {
+          default: "arcade",
+          arcade: {
+            gravity: { y: 300 },
+            debug: false
+          }
+        },
+        scene: {
+          preload: preload,
+          create: create,
+          update: update
+        }
+      };
 
-        var config = {
-            //Phaser.AUTO tries to use Phaser.WEBGL, then use Phaser.CANVAS if not supported 
-            type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 300 },
-                    debug: false
-                }
-            },
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            }
-        };
-
+        var player;   
+        var stars;
+        var platforms;
+        var cursors;
+        var score = 0;
+        var scoreText;
+      
         var game = new Phaser.Game(config);
-        // preload function loads in all game asset before game starts
-        function preload() {
-            this.load.image('sky', 'assets/sky.png');
-            this.load.image('ground', 'assets/platform.png');
-            this.load.image('star', 'assets/star.png');
-            this.load.image('bomb', 'assets/bomb.png');
-            this.load.spritesheet('dude',
-                'assets/dude.png',
-                { frameWidth: 32, frameHeight: 48 }
-            );
+      // preload function loads in all game asset before game starts
+      function preload() {
+        this.load.image("sky", "assets/sky.png");
+        this.load.image("ground", "assets/platform.png");
+        this.load.image("star", "assets/star.png");
+        this.load.image("bomb", "assets/bomb.png");
+        this.load.spritesheet("dude", "assets/dude.png", {
+          frameWidth: 32,
+          frameHeight: 48
+        });
+      }
+
+      function create() {
+        this.add.image(400, 300, "sky");
+        //another way to position assets on the screen
+        // lower assets will be displayed ontop of higher assets
+        // this.add.image(0, 300, "star").setOrigin(0, 0);
+
+        // creates a STATIC physics ground that can intteract with dynamic physics groups
+        platforms = this.physics.add.staticGroup();
+        //setScale scales the base ground asset, and need to also add refreshBody() to notify game engine about new size
+        platforms
+          .create(400, 568, "ground")
+          .setScale(2)
+          .refreshBody();
+        platforms.create(600, 400, "ground");
+        platforms.create(50, 250, "ground");
+        platforms.create(750, 220, "ground");
+
+        // creating player at position X,Y
+        player = this.physics.add.sprite(100, 450, "dude");
+        // a physics attribute to make player bounce some amount based on value
+        player.setBounce(0.2);
+        // stops player from going off screen
+        player.setCollideWorldBounds(true);
+        //the higher the gravity value, faster it falls. Game config already have gravity
+        // player.body.setGravityY(100);
+
+        // repeate: -1 means to loop the animation
+        this.anims.create({
+          key: "left",
+          frames: this.anims.generateFrameNumbers("dude", { start: 0, end: 3 }),
+          frameRate: 10,
+          repeat: -1
+        });
+
+        this.anims.create({
+          key: "turn",
+          frames: [{ key: "dude", frame: 4 }],
+          frameRate: 20
+        });
+
+        this.anims.create({
+          key: "right",
+          frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }),
+          frameRate: 10,
+          repeat: -1
+        });
+
+        // add new star group that can interact with player
+        stars = this.physics.add.group({
+            key: 'star',
+            //total of 1 + 11 star objects created
+            repeat: 11, 
+            // stepX is the offset for each other stars
+            setXY: { x: 12, y: 0, stepX: 70 }
+        });
+
+        stars.children.iterate(function (child) {
+
+            child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+
+        });
+
+        cursors = this.input.keyboard.createCursorKeys();
+
+        scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#000' });
+
+        //adding physics interaction between 2 physic groups
+        this.physics.add.collider(player, platforms);
+
+        this.physics.add.collider(stars, platforms);
+        // if player and stars overlap (touch), then use callback collectStar
+        this.physics.add.overlap(player, stars, collectStar, null, this);
+
+
+      }
+
+        function update ()
+        {
+            if (cursors.left.isDown)
+            {
+                player.setVelocityX(-160);
+                player.anims.play('left', true);
+            }
+            else if (cursors.right.isDown)
+            {
+                player.setVelocityX(160);
+                player.anims.play('right', true);
+            }
+            else
+            {
+                player.setVelocityX(0);
+                player.anims.play('turn');
+            }
+
+            if (cursors.up.isDown && player.body.touching.down)
+            {
+                player.setVelocityY(-330);
+            }
         }
 
-        function create() {
-            this.add.image(400, 300, 'sky');
-            //another way to position assets on the screen
-            // lower assets will be displayed ontop of higher assets
-            this.add.image(0, 300, 'star').setOrigin(0, 0);
-
-            // creates a STATIC physics ground that can intteract with dynamic physics groups
-            platforms = this.physics.add.staticGroup();
-            //setScale scales the base ground asset, and need to also add refreshBody() to notify game engine about new size
-            platforms.create(400, 568, 'ground').setScale(2).refreshBody();
-            platforms.create(600, 400, 'ground');
-            platforms.create(50, 250, 'ground');
-            platforms.create(750, 220, 'ground');
-
-            // creating player at position X,Y
-            player = this.physics.add.sprite(100, 450, 'dude');
-            // a physics attribute to make player bounce some amount based on value
-            player.setBounce(0.2);
-            // stops player from going off screen
-            player.setCollideWorldBounds(true);
-            //the higher the gravity value, faster it falls
-            player.body.setGravityY(100);
-
-            // repeate: -1 means to loop the animation
-            this.anims.create({
-                key: 'left',
-                frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
-                frameRate: 10,
-                repeat: -1
-            });
-
-            this.anims.create({
-                key: 'turn',
-                frames: [{ key: 'dude', frame: 4 }],
-                frameRate: 20
-            });
-
-            this.anims.create({
-                key: 'right',
-                frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
-                frameRate: 10,
-                repeat: -1
-            });
-
-            //adding physics interaction between 2 physic groups
-            this.physics.add.collider(player,platforms);
-
+        function collectStar (player, star)
+        {
+            // if player touches the star, disableBody = make it inviisble and remove from game
+            star.disableBody(true, true);
+            score += 10;
+            scoreText.setText('Score: ' + score)
         }
-
-        function update() {
-        }
-
     </script>
-
-</body>
-
+  </body>
 </html>
