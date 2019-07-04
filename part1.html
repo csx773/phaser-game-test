@@ -73,7 +73,7 @@
         // creating player at position X,Y
         player = this.physics.add.sprite(100, 450, "dude");
         // a physics attribute to make player bounce some amount based on value
-        player.setBounce(0.2);
+        player.setBounce(0.25);
         // stops player from going off screen
         player.setCollideWorldBounds(true);
         //the higher the gravity value, faster it falls. Game config already have gravity
@@ -138,12 +138,12 @@
         {
             if (cursors.left.isDown)
             {
-                player.setVelocityX(-160);
+                player.setVelocityX(-200);
                 player.anims.play('left', true);
             }
             else if (cursors.right.isDown)
             {
-                player.setVelocityX(160);
+                player.setVelocityX(200);
                 player.anims.play('right', true);
             }
             else
@@ -154,10 +154,10 @@
 
             if (cursors.up.isDown && player.body.touching.down)
             {
-                player.setVelocityY(-330);
+                player.setVelocityY(-380);
             }
         }
-        
+
         function collectStar (player, star)
         {
             star.disableBody(true, true);
